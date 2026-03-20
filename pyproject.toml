@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tf-audit"
+version = "1.0.0"
+description = "Terraform configuration auditor & security scanner — 55+ rules for security, naming, modules, and best practices."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [{name = "Sai Sandeep"}]
+keywords = ["terraform", "security", "audit", "linter", "iac", "hcl", "devops", "compliance"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = [
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "python-hcl2>=4.0.0",
+]
+
+[project.scripts]
+tf-audit = "tf_audit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["tf_audit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short"
