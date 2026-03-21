@@ -1,6 +1,6 @@
 """Tests for tf-audit data models."""
 from tf_audit.models import (
-    Severity, Category, Issue, TfResource, TfFile, AuditReport,
+    Severity, Category, Issue, TfResource, AuditReport,
 )
 
 

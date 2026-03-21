@@ -3,7 +3,7 @@
 8 rules (TF-NAM-001 to TF-NAM-008).
 """
 import re
-from tf_audit.models import Issue, Severity, Category, TfFile
+from tf_audit.models import Issue, Severity, Category
 
 
 SNAKE_CASE_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")

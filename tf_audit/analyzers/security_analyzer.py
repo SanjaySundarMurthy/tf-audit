@@ -2,7 +2,7 @@
 
 20 rules (TF-SEC-001 to TF-SEC-020) covering AWS, Azure, and GCP resources.
 """
-from tf_audit.models import Issue, Severity, Category, TfFile
+from tf_audit.models import Issue, Severity, Category
 
 
 def analyze(tf_files: list) -> list:

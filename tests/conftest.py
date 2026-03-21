@@ -30,6 +30,7 @@ terraform {
     key            = "prod/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "terraform-locks"
+    encrypt        = true
   }
 }
 
@@ -130,6 +131,8 @@ resource "aws_db_instance" "main" {
   publicly_accessible = true
   storage_encrypted   = false
   backup_retention_period = 1
+  username            = "admin"
+  password            = "SuperSecretPassword123!"
 }
 
 resource "aws_ebs_volume" "this" {

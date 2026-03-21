@@ -2,7 +2,6 @@
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from tf_audit.models import AuditReport, Severity, Category, SEVERITY_COLORS, SEVERITY_ICONS, CATEGORY_ICONS
 
@@ -145,5 +144,5 @@ def _print_footer(report, console):
         console.print(f"  [yellow]⚠️  {total} issues found. Review and address high/critical findings.[/yellow]")
     else:
         console.print(f"  [red]🚨 {total} issues found. Immediate attention needed for security findings.[/red]")
-    console.print(f"  [dim]  Run with --verbose for fix suggestions[/dim]")
+    console.print("  [dim]  Run with --verbose for fix suggestions[/dim]")
     console.print()

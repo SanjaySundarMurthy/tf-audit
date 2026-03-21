@@ -8,7 +8,6 @@ class TestBestPracticesAnalyzer:
         tf_files = parse_terraform(good_tf_dir)
         issues = analyze(tf_files)
         # Secure config has tags, sensitive flags, etc.
-        bp_ids = [i.rule_id for i in issues if i.rule_id.startswith("TF-BP")]
         # Should not flag sensitive variable (it has sensitive = true)
         assert "TF-BP-002" not in [i.rule_id for i in issues]
 
@@ -35,6 +34,32 @@ class TestBestPracticesAnalyzer:
         issues = analyze(tf_files)
         rule_ids = [i.rule_id for i in issues]
         assert "TF-BP-011" in rule_ids  # no .gitignore
+
+    def test_insecure_detects_hardcoded_credentials(self, bad_tf_dir):
+        tf_files = parse_terraform(bad_tf_dir)
+        issues = analyze(tf_files)
+        rule_ids = [i.rule_id for i in issues]
+        assert "TF-BP-004" in rule_ids  # hardcoded password in RDS
+
+    def test_insecure_detects_missing_lifecycle(self, bad_tf_dir):
+        tf_files = parse_terraform(bad_tf_dir)
+        issues = analyze(tf_files)
+        rule_ids = [i.rule_id for i in issues]
+        assert "TF-BP-007" in rule_ids  # stateful resource without lifecycle
+
+    def test_provisioner_detected(self, tmp_tf):
+        path = tmp_tf({"main.tf": '''
+resource "aws_instance" "web" {
+  ami = "ami-123"
+  provisioner "local-exec" {
+    command = "echo hello"
+  }
+}
+'''})
+        tf_files = parse_terraform(path)
+        issues = analyze(tf_files)
+        rule_ids = [i.rule_id for i in issues]
+        assert "TF-BP-015" in rule_ids  # provisioner usage
 
     def test_no_files(self):
         issues = analyze([])

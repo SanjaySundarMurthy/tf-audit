@@ -15,7 +15,7 @@ if sys.platform == "win32":
         pass
 
 from tf_audit import __version__
-from tf_audit.models import AuditReport, Severity, Category
+from tf_audit.models import AuditReport, Severity
 from tf_audit.parser import parse_terraform, get_all_resources, get_providers
 from tf_audit.analyzers import security_analyzer, naming_analyzer, module_analyzer, best_practices_analyzer
 from tf_audit.reporters.terminal_reporter import print_report
@@ -58,7 +58,7 @@ def main():
 
     Audit Terraform (.tf) files for security misconfigurations,
     naming conventions, module quality, and best practices.
-    55+ rules across 7 categories for AWS, Azure, and GCP.
+    55 rules across 7 categories for AWS, Azure, and GCP.
 
     \b
     Examples:
@@ -178,7 +178,7 @@ def demo(verbose):
 
 @main.command()
 def rules():
-    """List all 55+ audit rules organized by category."""
+    """List all 55 audit rules organized by category."""
     from rich.table import Table
 
     rule_defs = [
@@ -217,27 +217,33 @@ def rules():
         ("TF-MOD-002", "INFO", "Modules", "Module uses local source path"),
         ("TF-MOD-003", "MEDIUM", "Modules", "Variable without description"),
         ("TF-MOD-004", "MEDIUM", "Modules", "Variable without type constraint"),
+        ("TF-MOD-005", "LOW", "Modules", "Variable with overly permissive 'any' type"),
         ("TF-MOD-006", "LOW", "Modules", "Output without description"),
         ("TF-MOD-007", "MEDIUM", "Modules", "No required_providers block"),
         ("TF-MOD-008", "LOW", "Modules", "Provider with inline version (deprecated)"),
         ("TF-MOD-009", "MEDIUM", "Modules", "No required_version constraint"),
         ("TF-MOD-010", "MEDIUM", "State", "No backend configuration (local state)"),
         ("TF-MOD-011", "HIGH", "State", "S3 backend without DynamoDB state locking"),
+        ("TF-MOD-012", "HIGH", "State", "S3 backend without encryption enabled"),
         # Best Practices (15)
         ("TF-BP-001", "MEDIUM", "Practices", "Hardcoded IDs instead of variables/data sources"),
         ("TF-BP-002", "HIGH", "Practices", "Sensitive variable without sensitive = true"),
         ("TF-BP-003", "MEDIUM", "Tagging", "Resource without tags/labels"),
+        ("TF-BP-004", "CRITICAL", "Practices", "Hardcoded credentials in resource configuration"),
         ("TF-BP-005", "LOW", "Practices", "count used instead of for_each"),
         ("TF-BP-006", "LOW", "Practices", "Provider version in provider block (deprecated)"),
+        ("TF-BP-007", "MEDIUM", "Practices", "No lifecycle block for stateful resources"),
+        ("TF-BP-008", "LOW", "Practices", "File name doesn't follow Terraform conventions"),
         ("TF-BP-009", "LOW", "Practices", "Large file (>500 lines)"),
         ("TF-BP-010", "LOW", "Practices", "Too many resources in one file (>15)"),
         ("TF-BP-011", "MEDIUM", "Practices", "Missing or incomplete .gitignore"),
         ("TF-BP-012", "MEDIUM", "Providers", "Provider version without upper bound"),
         ("TF-BP-013", "INFO", "Practices", "Variable without validation block"),
         ("TF-BP-014", "HIGH", "Practices", "Sensitive output without sensitive = true"),
+        ("TF-BP-015", "MEDIUM", "Practices", "Resource uses provisioner (anti-pattern)"),
     ]
 
-    table = Table(title="📋 tf-audit Rules (55+)", show_lines=False, padding=(0, 1))
+    table = Table(title="📋 tf-audit Rules (55)", show_lines=False, padding=(0, 1))
     table.add_column("Rule ID", style="bold cyan", width=12)
     table.add_column("Severity", width=10)
     table.add_column("Category", width=12)
@@ -254,4 +260,5 @@ def rules():
 
     console.print()
     console.print(table)
-    console.print(f"\n[dim]  {len(rule_defs)} rules across 7 categories (Security, Naming, Modules, State, Practices, Tagging, Providers)[/dim]\n")
+    console.print(f"\n[dim]  {len(rule_defs)} rules across 7 categories"
+                  " (Security, Naming, Modules, State, Practices, Tagging, Providers)[/dim]\n")

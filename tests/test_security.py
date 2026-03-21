@@ -7,7 +7,6 @@ class TestSecurityAnalyzer:
     def test_secure_config_fewer_issues(self, good_tf_dir):
         tf_files = parse_terraform(good_tf_dir)
         issues = analyze(tf_files)
-        sec_ids = [i.rule_id for i in issues if i.rule_id.startswith("TF-SEC")]
         # Secure config: encrypted S3, private RDS, encrypted storage
         # May still get INFO-level VPC flow log reminder
         critical = [i for i in issues if i.severity.value == "critical"]

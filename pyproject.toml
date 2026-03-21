@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tf-audit"
 version = "1.0.0"
-description = "Terraform configuration auditor & security scanner — 55+ rules for security, naming, modules, and best practices."
+description = "Terraform configuration auditor & security scanner — 55 rules for security, naming, modules, and best practices."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
@@ -33,6 +33,19 @@ tf-audit = "tf_audit.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["tf_audit*"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.4.0",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

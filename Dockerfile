@@ -11,6 +11,7 @@ LABEL maintainer="ssan" \
       org.opencontainers.image.description="tf-audit - DevOps CLI Tool"
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
+WORKDIR /workspace
 COPY --from=builder /app/dist/*.whl /tmp/
 RUN pip install --no-cache-dir /tmp/*.whl && rm -rf /tmp/*.whl
 

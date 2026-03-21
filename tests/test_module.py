@@ -8,7 +8,6 @@ class TestModuleAnalyzer:
         tf_files = parse_terraform(good_tf_dir)
         issues = analyze(tf_files)
         # Secure config has required_providers, required_version, backend, descriptions
-        mod_ids = [i.rule_id for i in issues if i.rule_id.startswith("TF-MOD")]
         # Should not have TF-MOD-007, 009, 010, 003 since they're all present
         assert "TF-MOD-007" not in [i.rule_id for i in issues]
         assert "TF-MOD-009" not in [i.rule_id for i in issues]
@@ -43,6 +42,41 @@ class TestModuleAnalyzer:
         issues = analyze(tf_files)
         rule_ids = [i.rule_id for i in issues]
         assert "TF-MOD-010" in rule_ids
+
+    def test_type_any_detected(self, tmp_tf):
+        path = tmp_tf({"variables.tf": '''
+variable "config" {
+  description = "Generic config"
+  type        = any
+}
+'''})
+        tf_files = parse_terraform(path)
+        issues = analyze(tf_files)
+        rule_ids = [i.rule_id for i in issues]
+        assert "TF-MOD-005" in rule_ids  # type = any
+
+    def test_backend_no_encryption(self, tmp_tf):
+        path = tmp_tf({"main.tf": '''
+terraform {
+  required_version = ">= 1.5"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  backend "s3" {
+    bucket         = "my-state"
+    key            = "terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "locks"
+  }
+}
+'''})
+        tf_files = parse_terraform(path)
+        issues = analyze(tf_files)
+        rule_ids = [i.rule_id for i in issues]
+        assert "TF-MOD-012" in rule_ids  # no encrypt = true
 
     def test_no_files(self):
         issues = analyze([])

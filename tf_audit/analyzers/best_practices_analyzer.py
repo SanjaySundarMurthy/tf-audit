@@ -1,10 +1,9 @@
 """Best practices analyzer — checks for Terraform coding standards and patterns.
 
-15 rules (TF-BP-001 to TF-BP-015).
-"""
+15 rules (TF-BP-001 to TF-BP-015)."""
 import re
 import os
-from tf_audit.models import Issue, Severity, Category, TfFile
+from tf_audit.models import Issue, Severity, Category
 
 
 # Patterns for detecting hardcoded values that should be variables
@@ -20,6 +19,26 @@ SENSITIVE_VAR_PATTERNS = re.compile(
     r"(password|secret|token|api_key|access_key|private_key|credentials|connection_string)",
     re.IGNORECASE,
 )
+
+CREDENTIAL_PATTERNS = re.compile(
+    r"(password|secret|token|api_key|access_key|private_key|credentials|connection_string)\b",
+    re.IGNORECASE,
+)
+
+# Resource types that are stateful and should have lifecycle blocks
+STATEFUL_RESOURCES = {
+    "aws_db_instance", "aws_rds_cluster", "aws_s3_bucket", "aws_dynamodb_table",
+    "aws_efs_file_system", "aws_elasticache_cluster", "aws_elasticsearch_domain",
+    "azurerm_sql_server", "azurerm_cosmosdb_account", "azurerm_storage_account",
+    "azurerm_key_vault", "azurerm_postgresql_server", "azurerm_mysql_server",
+    "google_sql_database_instance", "google_storage_bucket", "google_bigtable_instance",
+}
+
+# Standard Terraform file names
+STANDARD_TF_NAMES = {
+    "main.tf", "variables.tf", "outputs.tf", "providers.tf", "versions.tf",
+    "terraform.tf", "backend.tf", "locals.tf", "data.tf",
+}
 
 # Resource types that should have tags
 TAGGABLE_AWS = {
@@ -52,10 +71,14 @@ def analyze(tf_files: list) -> list:
     for tf in tf_files:
         _check_file_size(tf, issues)
         _check_resource_count(tf, issues)
+        _check_file_naming(tf, issues)
         for res in tf.resources:
             _check_hardcoded_ids(res, issues)
+            _check_hardcoded_credentials(res, issues)
             _check_resource_tags(res, issues)
             _check_count_vs_for_each(res, issues)
+            _check_lifecycle_stateful(res, issues)
+            _check_provisioner_usage(res, issues)
         for var in tf.variables:
             _check_sensitive_variable(var, tf.path, issues)
             _check_variable_validation(var, tf.path, issues)
@@ -87,6 +110,26 @@ def _check_hardcoded_ids(res, issues):
                 suggestion=suggestion,
             ))
             break  # One finding per resource
+
+
+def _check_hardcoded_credentials(res, issues):
+    """TF-BP-004: Hardcoded credentials in resource configuration."""
+    config = res.config
+    for key, value in config.items():
+        if CREDENTIAL_PATTERNS.search(key) and isinstance(value, str) and value and not value.startswith("var."):
+            # Skip references to other resources/variables
+            if not value.startswith("${") and not value.startswith("data.") and not value.startswith("module."):
+                issues.append(Issue(
+                    rule_id="TF-BP-004",
+                    severity=Severity.CRITICAL,
+                    category=Category.BEST_PRACTICES,
+                    message=f"Resource '{res.resource_type}.{res.name}' has hardcoded credential in '{key}'",
+                    resource_type=res.resource_type,
+                    resource_name=res.name,
+                    file_path=res.file_path,
+                    suggestion="Use a variable with sensitive = true or a secrets manager reference",
+                ))
+                return  # One finding per resource
 
 
 def _check_sensitive_variable(var, file_path, issues):
@@ -276,4 +319,56 @@ def _check_sensitive_output(out, file_path, issues):
             message=f"Output '{name}' appears sensitive but lacks sensitive = true",
             file_path=file_path,
             suggestion="Add sensitive = true to prevent secrets from appearing in terraform output",
+        ))
+
+
+def _check_lifecycle_stateful(res, issues):
+    """TF-BP-007: No lifecycle block for stateful resources."""
+    if res.resource_type not in STATEFUL_RESOURCES:
+        return
+    if "lifecycle" not in res.config:
+        issues.append(Issue(
+            rule_id="TF-BP-007",
+            severity=Severity.MEDIUM,
+            category=Category.BEST_PRACTICES,
+            message=f"Stateful resource '{res.resource_type}.{res.name}' has no lifecycle block",
+            resource_type=res.resource_type,
+            resource_name=res.name,
+            file_path=res.file_path,
+            suggestion="Add lifecycle { prevent_destroy = true } for stateful resources in production",
+        ))
+
+
+def _check_file_naming(tf, issues):
+    """TF-BP-008: Terraform file name doesn't follow conventions."""
+    filename = os.path.basename(tf.path)
+    if filename in STANDARD_TF_NAMES:
+        return
+    # Allow descriptive names like networking.tf, compute.tf — just check format
+    if not filename.endswith(".tf"):
+        return
+    name_part = filename[:-3]
+    if not re.match(r"^[a-z][a-z0-9_-]*$", name_part):
+        issues.append(Issue(
+            rule_id="TF-BP-008",
+            severity=Severity.LOW,
+            category=Category.BEST_PRACTICES,
+            message=f"File '{filename}' doesn't follow naming conventions (lowercase, hyphens/underscores)",
+            file_path=tf.path,
+            suggestion="Use lowercase names: main.tf, variables.tf, networking.tf",
+        ))
+
+
+def _check_provisioner_usage(res, issues):
+    """TF-BP-015: Resource uses provisioner (anti-pattern)."""
+    if "provisioner" in res.config:
+        issues.append(Issue(
+            rule_id="TF-BP-015",
+            severity=Severity.MEDIUM,
+            category=Category.BEST_PRACTICES,
+            message=f"Resource '{res.resource_type}.{res.name}' uses a provisioner (anti-pattern)",
+            resource_type=res.resource_type,
+            resource_name=res.name,
+            file_path=res.file_path,
+            suggestion="Replace provisioners with cloud-init, user_data, or configuration management tools",
         ))

@@ -28,7 +28,6 @@ jobs:
 
       - name: Lint with Ruff
         run: ruff check .
-        continue-on-error: true
 
       - name: Run tests
         run: pytest -v --tb=short

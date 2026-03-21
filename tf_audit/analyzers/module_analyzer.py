@@ -1,9 +1,7 @@
 """Module quality analyzer — checks variables, outputs, providers, state, and module configs.
 
-12 rules (TF-MOD-001 to TF-MOD-012).
-"""
-import re
-from tf_audit.models import Issue, Severity, Category, TfFile
+12 rules (TF-MOD-001 to TF-MOD-012)."""
+from tf_audit.models import Issue, Severity, Category
 
 
 def analyze(tf_files: list) -> list:
@@ -36,6 +34,7 @@ def analyze(tf_files: list) -> list:
     for var, fpath in all_variables:
         _check_variable_description(var, fpath, issues)
         _check_variable_type(var, fpath, issues)
+        _check_variable_type_any(var, fpath, issues)
 
     # Output checks
     for out, fpath in all_outputs:
@@ -47,6 +46,7 @@ def analyze(tf_files: list) -> list:
     _check_terraform_version(all_terraform, tf_files, issues)
     _check_backend_config(all_terraform, tf_files, issues)
     _check_backend_locking(all_terraform, tf_files, issues)
+    _check_backend_encryption(all_terraform, tf_files, issues)
 
     return issues
 
@@ -123,6 +123,21 @@ def _check_variable_type(var, file_path, issues):
         ))
 
 
+def _check_variable_type_any(var, file_path, issues):
+    """TF-MOD-005: Variable with overly permissive 'any' type."""
+    name = var.get("_name", "")
+    var_type = var.get("type", "")
+    if isinstance(var_type, str) and var_type.strip().lower() in ("any", "${any}"):
+        issues.append(Issue(
+            rule_id="TF-MOD-005",
+            severity=Severity.LOW,
+            category=Category.MODULES,
+            message=f"Variable '{name}' uses 'any' type — no input validation",
+            file_path=file_path,
+            suggestion="Use a specific type (string, number, list, map, object) instead of 'any'",
+        ))
+
+
 def _check_output_description(out, file_path, issues):
     """TF-MOD-006: Output without description."""
     name = out.get("_name", "")
@@ -194,7 +209,8 @@ def _check_backend_config(terraform_blocks, tf_files, issues):
     """TF-MOD-010: Missing backend configuration."""
     has_backend = False
     for tb in terraform_blocks:
-        if "backend" in tb:
+        backend = tb.get("backend", [])
+        if backend:
             has_backend = True
             break
     if not has_backend and tf_files:
@@ -211,17 +227,58 @@ def _check_backend_config(terraform_blocks, tf_files, issues):
 def _check_backend_locking(terraform_blocks, tf_files, issues):
     """TF-MOD-011: Backend without state locking."""
     for tb in terraform_blocks:
-        backend = tb.get("backend", {})
-        if isinstance(backend, dict):
+        backend = tb.get("backend", [])
+        if isinstance(backend, list):
+            for entry in backend:
+                if isinstance(entry, dict):
+                    for backend_type, config in entry.items():
+                        if isinstance(config, dict) and backend_type == "s3" and not config.get("dynamodb_table"):
+                            issues.append(Issue(
+                                rule_id="TF-MOD-011",
+                                severity=Severity.HIGH,
+                                category=Category.STATE,
+                                message="S3 backend does not have DynamoDB state locking configured",
+                                file_path=tf_files[0].path if tf_files else "",
+                                suggestion="Add dynamodb_table for state locking to prevent concurrent modifications",
+                            ))
+        elif isinstance(backend, dict):
             for backend_type, config in backend.items():
-                if isinstance(config, dict):
-                    # S3 backend should have dynamodb_table
-                    if backend_type == "s3" and not config.get("dynamodb_table"):
-                        issues.append(Issue(
-                            rule_id="TF-MOD-011",
-                            severity=Severity.HIGH,
-                            category=Category.STATE,
-                            message="S3 backend does not have DynamoDB state locking configured",
-                            file_path=tf_files[0].path if tf_files else "",
-                            suggestion="Add dynamodb_table for state locking to prevent concurrent modifications",
-                        ))
+                if isinstance(config, dict) and backend_type == "s3" and not config.get("dynamodb_table"):
+                    issues.append(Issue(
+                        rule_id="TF-MOD-011",
+                        severity=Severity.HIGH,
+                        category=Category.STATE,
+                        message="S3 backend does not have DynamoDB state locking configured",
+                        file_path=tf_files[0].path if tf_files else "",
+                        suggestion="Add dynamodb_table for state locking to prevent concurrent modifications",
+                    ))
+
+
+def _check_backend_encryption(terraform_blocks, tf_files, issues):
+    """TF-MOD-012: S3 backend without encryption enabled."""
+    for tb in terraform_blocks:
+        backend = tb.get("backend", [])
+        if isinstance(backend, list):
+            for entry in backend:
+                if isinstance(entry, dict):
+                    for backend_type, config in entry.items():
+                        if isinstance(config, dict) and backend_type == "s3" and config.get("encrypt") is not True:
+                            issues.append(Issue(
+                                rule_id="TF-MOD-012",
+                                severity=Severity.HIGH,
+                                category=Category.STATE,
+                                message="S3 backend does not have encryption enabled",
+                                file_path=tf_files[0].path if tf_files else "",
+                                suggestion="Add encrypt = true to S3 backend configuration",
+                            ))
+        elif isinstance(backend, dict):
+            for backend_type, config in backend.items():
+                if isinstance(config, dict) and backend_type == "s3" and config.get("encrypt") is not True:
+                    issues.append(Issue(
+                        rule_id="TF-MOD-012",
+                        severity=Severity.HIGH,
+                        category=Category.STATE,
+                        message="S3 backend does not have encryption enabled",
+                        file_path=tf_files[0].path if tf_files else "",
+                        suggestion="Add encrypt = true to S3 backend configuration",
+                    ))
