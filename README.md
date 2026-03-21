@@ -1,4 +1,8 @@
-# tf-audit
+﻿# tf-audit
+
+[![CI](https://github.com/SanjaySundarMurthy/tf-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/SanjaySundarMurthy/tf-audit/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/pypi/pyversions/tf-audit)](https://pypi.org/project/tf-audit/)
+[![PyPI](https://img.shields.io/pypi/v/tf-audit)](https://pypi.org/project/tf-audit/)
 
 **Terraform Configuration Auditor & Security Scanner** — 55+ rules for security misconfigurations, naming conventions, module quality, and best practices across AWS, Azure, and GCP.
 
@@ -19,7 +23,7 @@
 ## Installation
 
 ```bash
-pip install -e .
+pip install tf-audit
 ```
 
 ## Quick Start
@@ -120,3 +124,50 @@ MIT
 ## Author
 
 **Sanjay S** — [GitHub](https://github.com/SanjaySundarMurthy)
+
+
+## 🐳 Docker
+
+Run without installing Python:
+
+```bash
+# Build the image
+docker build -t tf-audit .
+
+# Run
+docker run --rm tf-audit --help
+
+# Example with volume mount
+docker run --rm -v ${PWD}:/workspace tf-audit [command] /workspace
+```
+
+Or pull from the container registry:
+
+```bash
+docker pull ghcr.io/SanjaySundarMurthy/tf-audit:latest
+docker run --rm ghcr.io/SanjaySundarMurthy/tf-audit:latest --help
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+Please ensure tests pass before submitting:
+
+```bash
+pip install tf-audit
+pytest -v
+ruff check .
+```
+
+## 🔗 Links
+
+- **PyPI**: [https://pypi.org/project/tf-audit/](https://pypi.org/project/tf-audit/)
+- **GitHub**: [https://github.com/SanjaySundarMurthy/tf-audit](https://github.com/SanjaySundarMurthy/tf-audit)
+- **Issues**: [https://github.com/SanjaySundarMurthy/tf-audit/issues](https://github.com/SanjaySundarMurthy/tf-audit/issues)
